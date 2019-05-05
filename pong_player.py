@@ -224,20 +224,22 @@ def play_game(player1, player2, render=True):
     action2 = player2.get_action(state2)
     done = False
     total_reward1, total_reward2 = 0, 0
-    while not done:
-        next_state1, next_state2, reward1, reward2, done, _ = env.step(action1, action2)
+    frames = 0
+    while not done and frames < FRAME_COUNT:
+        next_state1, next_state2, reward1, reward2, done, _ = env.step(action1.item(), action2)
         if render:
             env.render()
         action1 = player1.get_action(next_state1)
         action2 = player2.get_action(next_state2)
         total_reward1 += reward1
         total_reward2 += reward2
+        frames += 1
 
     env.close()
 
-Version1 = PongPlayer("./data.dat")
-Version1.train(PongBot())
-Version1.save()
+Version1 = PongPlayer("./data.dat", load=True)
+# Version1.train(PongBot())
+# Version1.save()
 
 for i in range(10):
     play_game(Version1, PongBot())
