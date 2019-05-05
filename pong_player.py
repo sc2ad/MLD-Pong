@@ -9,13 +9,13 @@ import torchvision.transforms as T
 
 import numpy as np
 
-from two_player_pong_env import PongEnv
+from pong_env import PongEnv
 from collections import namedtuple
 from itertools import count
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
-FRAME_COUNT = 2500
+FRAME_COUNT = 3000
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = 'cpu'
@@ -145,20 +145,19 @@ class PongPlayer(object):
             param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
-    def train(self, player2):
-        num_episodes = 50
+    def train(self):
+        num_episodes = 1000
         for i_episode in range(num_episodes):
             # Initialize the environment and state
             env = PongEnv()
-            state1, state2 = env.reset()
+            state1 = env.reset()
             done = False
             print("Episode " + str(i_episode) + " has started")
             frames = 0
             while not done and frames < FRAME_COUNT:
                 # Select and perform an action
                 action1 = self.get_action(state1)
-                action2 = player2.get_action(state2)
-                next_state1, next_state2, reward, _, done, _ = env.step(action1.item(), action2)
+                next_state1, reward, done, _ = env.step(action1.item())
                 reward = torch.tensor([reward], device=device)
 
                 # Store the transition in memory
@@ -167,7 +166,6 @@ class PongPlayer(object):
 
                 # Move to the next state
                 state1 = next_state1
-                state2 = next_state2
 
                 # Perform one step of the optimization (on the target network)
                 # print("Beginning Optimization")
@@ -215,31 +213,27 @@ class PongBot(object):
         else:
             return 1
 
-def play_game(player1, player2, render=True):
+def play_game(player1, render=True):
     # call this function to run your model on the environment
     # and see how it does
     env = PongEnv()
-    state1, state2 = env.reset()
+    state1 = env.reset()
     action1 = player1.get_action(state1)
-    action2 = player2.get_action(state2)
     done = False
     total_reward1, total_reward2 = 0, 0
     frames = 0
     while not done and frames < FRAME_COUNT:
-        next_state1, next_state2, reward1, reward2, done, _ = env.step(action1.item(), action2)
+        next_state1, reward1, done, _ = env.step(action1.item())
         if render:
             env.render()
         action1 = player1.get_action(next_state1)
-        action2 = player2.get_action(next_state2)
         total_reward1 += reward1
-        total_reward2 += reward2
         frames += 1
 
     env.close()
 
 Version1 = PongPlayer("./data.dat", load=True)
-# Version1.train(PongBot())
-# Version1.save()
+Version1.train()
+Version1.save()
 
-for i in range(10):
-    play_game(Version1, PongBot())
+play_game(Version1)
