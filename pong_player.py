@@ -190,13 +190,19 @@ class PongPlayer(object):
 
     def load(self):
         state = torch.load(self.save_path)
-        self.model.load_state_dict(state['model_state_dict'])
+        self.policy_net.load_state_dict(state['policy_net_dict'])
+        self.target_net.load_state_dict(state['target_net_dict'])
         self.optimizer.load_state_dict(state['optimizer_state_dict'])
+        self.memory = state['memory']
+        self.BATCH_SIZE = state['BATCH_SIZE']
 
     def save(self):
         state = {
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict()
+            'policy_net_dict': self.policy_net.state_dict(),
+            'target_net_dict': self.target_net.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'memory' : self.memory,
+            'BATCH_SIZE' : self.BATCH_SIZE,
         }
         torch.save(state, self.save_path)
 
