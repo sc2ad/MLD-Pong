@@ -7,13 +7,18 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 
+import numpy as np
+
 from two_player_pong_env import PongEnv
 from collections import namedtuple
 from itertools import count
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+FRAME_COUNT = 2500
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = 'cpu'
 
 class ReplayMemory(object):
 
@@ -95,7 +100,7 @@ class PongPlayer(object):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return torch.tensor([[torch.argmax(self.policy_net(torch.from_numpy(state)))]])
+                return torch.tensor([[torch.argmax(self.policy_net(torch.from_numpy(np.array(state))))]])
         else:
             return torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
 
@@ -148,7 +153,8 @@ class PongPlayer(object):
             state1, state2 = env.reset()
             done = False
             print("Episode " + str(i_episode) + " has started")
-            while not done:
+            frames = 0
+            while not done and frames < FRAME_COUNT:
                 # Select and perform an action
                 action1 = self.get_action(state1)
                 action2 = player2.get_action(state2)
@@ -164,7 +170,10 @@ class PongPlayer(object):
                 state2 = next_state2
 
                 # Perform one step of the optimization (on the target network)
+                # print("Beginning Optimization")
                 self.optimize_model()
+                # print("Completing Optimization")
+                frames += 1
 
             # Update the target network, copying all weights and biases in DQN
             if i_episode % self.TARGET_UPDATE == 0:
@@ -220,8 +229,9 @@ def play_game(player1, player2, render=True):
 
     env.close()
 
-Version1 = PongPlayer("./data")
+Version1 = PongPlayer("./data.dat")
 Version1.train(PongBot())
+Version1.save()
 
 for i in range(10):
     play_game(Version1, PongBot())
