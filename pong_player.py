@@ -1,13 +1,15 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-from .pong_env import PongEnv
+from pong_env import PongEnv
 
 # TODO replace this class with your model
-class MyModelClass(torch.nn.Module):
-    
+class MyModelClass(nn.Module):
+
     def __init__(self):
         pass
-    
+
     def forward(self, x):
         pass
 
@@ -32,11 +34,11 @@ class PongPlayer(object):
 
     def build_optimizer(self):
         # TODO: define your optimizer here
-        self.optimizer = None
+        pass
 
     def get_action(self, state):
         # TODO: this method should return the output of your model
-        pass
+        #return self.model(state)
 
     def reset(self):
         # TODO: this method will be called whenever a game finishes
@@ -56,7 +58,7 @@ class PongPlayer(object):
         }
         torch.save(state, self.save_path)
 
-    
+
 def play_game(player, render=True):
     # call this function to run your model on the environment
     # and see how it does
@@ -71,5 +73,7 @@ def play_game(player, render=True):
             env.render()
         action = player.get_action(next_state)
         total_reward += reward
-    
+
     env.close()
+
+play_game(PongPlayer("./data.txt"))
