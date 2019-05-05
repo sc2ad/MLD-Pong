@@ -1,6 +1,6 @@
 import torch
 import sys
-from pong_env import PongEnv
+
 
 INPUTS = 7
 OUTPUTS = 3
@@ -8,14 +8,21 @@ ADD_CONNECTION_CHANCE = 0.1
 ADD_NODE_CHANCE = 0.03
 ITERATIONS = 1000
 # SEED = 123123
-SEED = 123
+SEED = 8937452
 MAX_FRAMES = 2500
 LOAD_BEST = True
+SAVE_PATH = "20_379_test.dat"
 BEST_FILE = "20_379_test.dat"
 RENDER = True
 LOAD = True
-RENDER_BEST_UPDATES = True
-PRINT_ACTIONS = True
+RENDER_BEST_UPDATES = False
+PRINT_ACTIONS = False
+TWO_PLAYER = False
+
+if not TWO_PLAYER:
+    from pong_env import PongEnv
+else:
+    from two_player_pong_env import PongEnv
 
 # TODO replace this class with your model
 class MyModelClass(torch.nn.Module):
@@ -130,7 +137,7 @@ class PongPlayer(object):
         # self.connections[ind].mutate(torch.rand([1]).item() - 0.5)
         self.connections[ind].mutate()
 
-    def get_action(self, state, reward):
+    def get_action(self, state, reward=0):
         # TODO: this method should return the output of your model
         # First we forward through all connections (after setting the input nodes to contain the input state)
         for i in range(INPUTS):
@@ -159,7 +166,7 @@ class PongPlayer(object):
         self.rewardHistory.append(self.reward)
         self.reward = 0
 
-    def reset(self, i):
+    def reset(self, i=0):
         # TODO: this method will be called whenever a game finishes
         # so if you create a model that has state you should reset it here
         # NOTE: this is optional and only if you need it for your model
@@ -286,6 +293,80 @@ def play_game(player, render=True, load=False):
     # if not load or not LOAD_BEST:
     #     print("Saving player to: " + player.save_path)
     #     player.save()
+
+def play2():
+    global ITERATIONS
+    # call this function to run your model on the environment
+    # and see how it does
+    player1 = PongPlayer(SAVE_PATH)
+    player2 = PongPlayer(SAVE_PATH)
+    if LOAD:
+        player1.load()
+        player2.load()
+        # Run it only once!
+        if LOAD_BEST:
+            ITERATIONS = 1
+    for i in range(ITERATIONS):
+        print("Starting iteration: " + str(i))
+        print("Setting seed to: " + str(SEED))
+        env = PongEnv()
+        env.seed(SEED)
+        state1, state2 = env.reset()
+        action1 = player1.get_action(state1, 0)
+        action2 = player2.get_action(state2, 0)
+        done = False
+        total_reward1 = 0
+        total_reward2 = 0
+        frames = 0
+        while not done and frames < MAX_FRAMES:
+            next_state1, next_state2, reward1, reward2, done, _ = env.step(action1, action2)
+            if RENDER:
+                env.render()
+            total_reward1 += reward1
+            total_reward2 += reward2
+            action1 = player1.get_action(next_state1, total_reward1)
+            action2 = player2.get_action(next_state2, total_reward2)
+            frames += 1
+        if frames == MAX_FRAMES:
+            # Then the player gets a reward of 0 for this, because they got into a tie.
+            print("Tie game! Game timed out!")
+            # player.reward = 0
+        env.close()
+        if player1.newBest and RENDER_BEST_UPDATES:
+            print("Showing the new best player...")
+            env = PongEnv()
+            env.seed(SEED)
+            state1, state2 = env.reset()
+            action1 = player1.get_action(state1, 0)
+            action2 = player2.get_action(state2, 0)
+            done = False
+            total_reward1 = 0
+            total_reward2 = 0
+            frames = 0
+            while not done and frames < MAX_FRAMES:
+                next_state1, next_state2, reward1, reward2, done, _ = env.step(action1, action2)
+                env.render()
+                total_reward1 += reward1
+                total_reward2 += reward2
+                action1 = player1.get_action(next_state1, total_reward1)
+                action2 = player2.get_action(next_state2, total_reward2)
+                frames += 1
+            if frames == MAX_FRAMES:
+                # Then the player gets a reward of 0 for this, because they got into a tie.
+                print("Tie game! Game timed out!")
+                # player.reward = 0
+            env.close()
+            player1.newBest = False
+            player2.newBest = False
+        player1.reset(i)
+        player2.reset(i)
+    print("Maximum after " + str(ITERATIONS) + " was reward: " + str(max(player1.rewardHistory)))
+    # if not load or not LOAD_BEST:
+    #     print("Saving player to: " + player.save_path)
+    #     player.save()
     
 if __name__ == '__main__':
-    play_game(PongPlayer("379_test.dat"), render=RENDER, load=LOAD)
+    if not TWO_PLAYER:
+        play_game(PongPlayer("379_test.dat"), render=RENDER, load=LOAD)
+    else:
+        play2()
